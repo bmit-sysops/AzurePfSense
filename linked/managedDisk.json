@@ -23,13 +23,13 @@
         }
     },
     "variables": {
-        "sourceVhdUri": "[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net', parameters('sourceVhdPath'))]"
+        "sourceVhdUri": "[concat('https://', parameters('storageAccountName'), '.blob.mlt.l01.bmitazure.com', parameters('sourceVhdPath'))]"
     },
     "resources": [
         {
             "name": "[parameters('managedDiskName')]",
             "type": "Microsoft.Compute/disks",
-            "apiVersion": "2018-06-01",
+            "apiVersion": "2017-03-30",
             "location": "[parameters('location')]",
             "tags": {},
             "sku": {

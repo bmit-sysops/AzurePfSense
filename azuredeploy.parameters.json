@@ -2,20 +2,8 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "virtualNetworkResourceGroup": {
-            "value": "eu-vdc-vnet"
-        },
-        "pfSenseResourceGroup": {
-            "value": "eu-firewalls-rg"
-        },
-        "managementVmResourceGroup": {
-            "value": "eu-firewall-management-rg"
-        },
-        "location": {
-            "value": "West Europe"
-        },
         "vNetName": {
-            "value": "eu-vdc-vnet"
+            "value": "mlt-pfsense-vnet"
         },
         "vNetAddressPrefix": {
             "value": "10.0.0.0/24"
@@ -38,26 +26,26 @@
         "backEndSubnetAddressPrefix": {
             "value": "10.0.0.64/27"
         },
-        "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/christofvg/AzurePfSense/master/linked/"
-        },
         "managedDiskStorageType": {
             "value": "Standard_LRS"
         },
         "sourceVhdPath": {
-            "value": "/vhd/pfsense.vhd"
+            "value": "/vhdstore/pfsense-245p1-stack.vhd"
+        },
+        "vhdStorageAccountName": {
+            "value": "bmitcustomiaasimagestore"
         },
         "osType": {
             "value": "Linux"
         },
         "managedDiskName": {
-            "value": "eu-pfsense-1-os"
+            "value": "mlt-pfsense-1-os"
         },
         "frontEndNicName": {
-            "value": "eu-pfsense-1-frontend-nic"
+            "value": "mlt-pfsense-1-frontend-nic"
         },
         "backEndNicName": {
-            "value": "eu-pfsense-1-backend-nic"
+            "value": "mlt-pfsense-1-backend-nic"
         },
         "frontEndIp": {
             "value": "10.0.0.36"
@@ -66,37 +54,10 @@
             "value": "10.0.0.68"
         },
         "vmName": {
-            "value": "eu-pfsense-1"
+            "value": "mlt-pfsense-1"
         },
         "vmSize": {
-            "value": "Standard_B2s"
-        },
-        "managementVmName": {
-            "value": "eu-pfsense-mgmt"
-        },
-        "managementVmNicName": {
-            "value": "eu-pfsense-mgmt-nic"
-        },
-        "managementVmOSDiskName": {
-            "value": "eu-pfsense-mgmt-os"
-        },
-        "managementVmPublicIpAddressName": {
-            "value": "eu-pfsense-mgmt-pip"
-        },
-        "managementVmSize": {
-            "value": "Standard_B2s"
-        },
-        "managementVmDiskType": {
-            "value": "Premium_LRS"
-        },
-        "managementVmDiskType": {
-            "value": "Premium_LRS"
-        },
-        "managementVmAdminUserName": {
-            "value": "pfsense"
-        },
-        "managementVmOSVersion": {
-            "value": "2016-Datacenter"
+            "value": "Standard_A2"
         }
     }
 }
