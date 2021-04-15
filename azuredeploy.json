@@ -125,7 +125,7 @@
     },
     "variables": {
         "location": "[resourceGroup().location]",
-        "_artifactsLocation": "https://raw.githubusercontent.com/bmit-sysops/AzurePfSense/azurestackdev/linked/",
+        "_artifactsLocation": "https://raw.githubusercontent.com/bmit-sysops/AzurePfSense/azurestackdev-imageref/linked/",
         "virtualNetworkSubnets": [
             {
                 "name": "[parameters('gatewaySubnetName')]",
