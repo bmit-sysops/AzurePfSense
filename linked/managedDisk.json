@@ -38,8 +38,10 @@
             "properties": {
                 "osType": "[parameters('osType')]",
                 "creationData": {
-                    "createOption": "Import",
-                    "sourceUri": "[variables('sourceVhdUri')]"
+                    "createOption": "FromImage",
+                    "imageReference": {
+                        "id": "[variables('sourceVhdUri')]"
+                     }
                 }
             }
         }
