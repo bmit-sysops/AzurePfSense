@@ -1,7 +1,50 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
+    "apiProfile": "2018-03-01-hybrid",
     "parameters": {
+        "adminUsername": {
+            "defaultValue": "localadmin",
+            "type": "String",
+            "metadata": {
+                "description": "Username for the Virtual Machine. Default value is localadmin"
+            }
+        },
+        "adminPassword": {
+            "defaultValue": "[concat('Subscription#',substring(resourcegroup().id,15,36))]",
+            "type": "SecureString",
+            "metadata": {
+                "description": "Password for the Virtual Machine. Default value is 'Subscription#<subscription id>'"
+            }
+        },
+        "imagePublisher": {
+            "defaultValue": "Canonical",
+            "type": "String",
+            "metadata": {
+                "description": "Maps to the publisher in the Azure Stack Platform Image Repository manifest file Eg: Canonical, Suse, OpenLogic "
+            }
+        },
+        "imageOffer": {
+            "defaultValue": "UbuntuServer",
+            "type": "String",
+            "metadata": {
+                "description": "Maps to the Offer in the Azure Stack Platform Image Repository manifest file Eg: UbuntuServer, SlesServer, CentOS "
+            }
+        },
+        "imageSku": {
+            "defaultValue": "16.04-LTS",
+            "type": "String",
+            "metadata": {
+                "description": "Maps to the sku in the Azure Stack Platform Image Repository manifest file Eg: 12.SP1, 6.7 , 7.2"
+            }
+        },
+        "vmSize": {
+            "defaultValue": "Standard_A1",
+            "type": "String",
+            "metadata": {
+                "description": "The size of the Virtual Machine."
+            }
+        },
         "vNetName": {
             "type": "String",
             "metadata": {
@@ -51,29 +94,10 @@
                 "description": "The address prefix of the back-end subnet"
             }
         },
-        "vmName": {
-            "type": "String",
-            "metadata": {
-                "description": "Name for the pfSense instance"
-            }
-        },
-        "vmSize": {
-            "defaultValue": "Standard_A2",
-            "type": "String",
-            "metadata": {
-                "description": "Size for the pfSense instance"
-            }
-        },
         "frontEndNicName": {
             "type": "String",
             "metadata": {
                 "description": "Name for the front-end NIC"
-            }
-        },
-        "frontEndIp": {
-            "type": "String",
-            "metadata": {
-                "description": "IP for the front-end NIC"
             }
         },
         "backEndNicName": {
@@ -82,51 +106,28 @@
                 "description": "Name for the back-end NIC"
             }
         },
+        "frontEndIp": {
+            "type": "String",
+            "metadata": {
+                "description": "IP for the front-end NIC"
+            }
+        },
         "backEndIp": {
             "type": "String",
             "metadata": {
                 "description": "IP for the back-end NIC"
             }
-        },
-        "managedDiskName": {
-            "type": "String",
-            "metadata": {
-                "description": "Name for the managed disk"
-            }
-        },
-         "managedDiskStorageType": {
-            "defaultValue": "Standard_LRS",
-            "type": "String",
-            "metadata": {
-                "description": "Storage type for the managed disk"
-            }
-        },
-        "vhdStorageAccountName": {
-            "defaultValue": "bmitcustomiaasimagestore",
-            "type": "String",
-            "metadata": {
-                "description": "Name of the storage account where the vhd file is stored. Note that blob.mlt.l01.bmitazure.com should be omiited."
-            }
-        },
-        "sourceVhdPath": {
-            "defaultValue": "/vhdstore/pfsense-245p1-stack.vhd",
-            "type": "String",
-            "metadata": {
-                "description": "Path to the vhd file on the storage account (e.g. /vhdstore/pfsense-245p1-stack.vhd)"
-            }
-        },
-        "osType": {
-            "defaultValue": "Linux",
-            "type": "String",
-            "metadata": {
-                "description": "OS Type of the image on the managed disk"
-            }
         }
     },
     "variables": {
         "location": "[resourceGroup().location]",
-        "_artifactsLocation": "https://raw.githubusercontent.com/bmit-sysops/AzurePfSense/azurestackdev-imageref/linked/",
-        "virtualNetworkSubnets": [
+        "OSDiskName": "osdisk",
+        "storageAccountName": "[concat('sa', uniquestring(resourceGroup().id))]",
+        "storageAccountType": "Standard_LRS",
+        "vmStorageAccountContainerName": "vhds",
+        "vmName": "[substring(concat('pfsense-',resourceGroup().Name),0,12)]",
+        "networkSecurityGroupName": "[tolower(concat('nsg',uniquestring(resourceGroup().id)))]",
+        "vNetSubnets": [
             {
                 "name": "[parameters('gatewaySubnetName')]",
                 "properties": {
@@ -146,119 +147,153 @@
                 }
             }
         ],
-        "networkTemplateUri": "[uri(variables('_artifactsLocation'), concat('virtualNetwork.json'))]",
-        "diskTemplateUri": "[uri(variables('_artifactsLocation'), concat('managedDisk.json'))]",
-        "virtualMachineTemplateUri": "[uri(variables('_artifactsLocation'), concat('pfSense.json'))]"
+        "frontEndSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', parameters('vnetName'),parameters('frontEndSubnetName'))]",
+        "backEndSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', parameters('vnetName'),parameters('backEndSubnetName'))]"
     },
     "resources": [
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "provisionVirtualNetwork",
-            "apiVersion": "2018-09-01",
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "[variables('storageAccountType')]"
+            },
+            "kind": "Storage",
+            "name": "[toLower(variables('storageAccountName'))]",
+            "location": "[variables('location')]"
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[resourceGroup().location]",
             "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('networkTemplateUri')]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "location": {
-                        "value": "[variables('location')]"
-                    },
-                    "vNetName": {
-                        "value": "[parameters('vNetName')]"
-                    },
-                    "vNetAddressPrefix": {
-                        "value": "[parameters('vNetAddressPrefix')]"
-                    },
-                    "vNetSubnets": {
-                        "value": "[variables('virtualNetworkSubnets')]"
+                "securityRules": [
+                    {
+                        "name": "ssh",
+                        "properties": {
+                            "description": "Allow RDP",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Inbound"
+                        }
                     }
-                }
+                ]
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "provisionManagedDisk",
-            "apiVersion": "2018-09-01",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('vNetName')]",
+            "location": "[variables('location')]",
             "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('diskTemplateUri')]",
-                    "contentVersion": "1.0.0.0"
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vNetAddressPrefix')]"
+                    ]
                 },
-                "parameters": {
-                    "location": {
-                        "value": "[variables('location')]"
-                    },
-                    "storageType": {
-                        "value": "[parameters('managedDiskStorageType')]"
-                    },
-                    "sourceVhdPath": {
-                        "value": "[parameters('sourceVhdPath')]"
-                    },
-                    "storageAccountName": {
-                        "value": "[parameters('vhdStorageAccountName')]"
-                    },
-                    "osType": {
-                        "value": "[parameters('osType')]"
-                    },
-                    "managedDiskName": {
-                        "value": "[parameters('managedDiskName')]"
-                    }
-                }
+                "subnets": "[variables('vNetSubnets')]"
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "provisionVirtualMachine",
-            "apiVersion": "2018-05-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('backEndNicName')]",
+            "location": "[variables('location')]",
             "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('virtualMachineTemplateUri')]",
-                    "contentVersion": "1.0.0.0"
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
                 },
-                "parameters": {
-                    "location": {
-                        "value": "[variables('location')]"
-                    },
-                    "frontEndNicName": {
-                        "value": "[parameters('frontEndNicName')]"
-                    },
-                    "backEndNicName": {
-                        "value": "[parameters('backEndNicName')]"
-                    },
-                    "frontEndIp": {
-                        "value": "[parameters('frontEndIp')]"
-                    },
-                    "backEndIp": {
-                        "value": "[parameters('backEndIp')]"
-                    },
-                    "vNetName": {
-                        "value": "[parameters('vNetName')]"
-                    },
-                    "frontEndSubnetName": {
-                        "value": "[variables('virtualNetworkSubnets')[1].Name]"
-                    },
-                    "backEndSubnetName": {
-                        "value": "[variables('virtualNetworkSubnets')[2].Name]"
-                    },
-                    "vmName": {
-                        "value": "[parameters('vmName')]"
-                    },
-                    "vmSize": {
-                        "value": "[parameters('vmSize')]"
-                    },
-                    "managedDiskName": {
-                        "value": "[parameters('managedDiskName')]"
-                    },
-                    "osType": {
-                        "value": "[parameters('osType')]"
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[parameters('backEndIp')]",
+                            "subnet": {
+                                "id": "[variables('backEndSubnetRef')]"
+                            }
+                        }
                     }
+                ]
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('frontEndNicName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[parameters('frontEndIp')]",
+                            "subnet": {
+                                "id": "[variables('frontEndSubnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('vmName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[parameters('imagePublisher')]",
+                        "offer": "[parameters('imageOffer')]",
+                        "sku": "[parameters('imageSku')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).primaryEndpoints.blob, variables('vmStorageAccountContainerName'),'/', variables('OSDiskName'), '.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "properties": {
+                                "primary": true
+                            },
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('frontEndNicName'))]"
+                        },
+                        {
+                            "properties": {
+                                "primary": false
+                            },
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('backEndNicName'))]"
+                        }
+                    ]
                 }
-            }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces/', parameters('frontEndNicName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces/', parameters('backEndNicName'))]"
+            ]
         }
-    ],
-    "outputs": {}
+    ]
 }

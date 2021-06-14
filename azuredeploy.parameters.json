@@ -2,8 +2,26 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "adminUsername": {
+            "value": "localadmin"
+        },
+        "adminPassword": {
+            "value": "null"
+        },
+        "imagePublisher": {
+            "value": "pfsense"
+        },
+        "imageOffer": {
+            "value": "pfsense"
+        },
+        "imageSku": {
+            "value": "OS"
+        },
+        "vmSize": {
+            "value": "Standard_A2"
+        },
         "vNetName": {
-            "value": "mlt-pfsense-vnet"
+            "value": "eu-vdc-vnet"
         },
         "vNetAddressPrefix": {
             "value": "10.0.0.0/24"
@@ -26,38 +44,17 @@
         "backEndSubnetAddressPrefix": {
             "value": "10.0.0.64/27"
         },
-        "managedDiskStorageType": {
-            "value": "Standard_LRS"
-        },
-        "sourceVhdPath": {
-            "value": "/vhdstore/pfsense-245p1-stack.vhd"
-        },
-        "vhdStorageAccountName": {
-            "value": "bmitcustomiaasimagestore"
-        },
-        "osType": {
-            "value": "Linux"
-        },
-        "managedDiskName": {
-            "value": "mlt-pfsense-1-os"
-        },
         "frontEndNicName": {
-            "value": "mlt-pfsense-1-frontend-nic"
+            "value": "eu-pfsense-1-frontend-nic"
         },
         "backEndNicName": {
-            "value": "mlt-pfsense-1-backend-nic"
+            "value": "eu-pfsense-1-backend-nic"
         },
         "frontEndIp": {
             "value": "10.0.0.36"
         },
         "backEndIp": {
             "value": "10.0.0.68"
-        },
-        "vmName": {
-            "value": "mlt-pfsense-1"
-        },
-        "vmSize": {
-            "value": "Standard_A2"
         }
     }
 }
